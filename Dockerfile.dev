@@ -1,0 +1,50 @@
+FROM node:22-slim
+
+# Install system dependencies for protobuf generation and native modules
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3 \
+    git \
+    curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install protoc (protobuf compiler)
+ARG PROTOC_VERSION=28.3
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then PROTOC_ARCH="linux-x86_64"; \
+    elif [ "$ARCH" = "arm64" ]; then PROTOC_ARCH="linux-aarch_64"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
+    curl -fsSL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-${PROTOC_ARCH}.zip" \
+      -o /tmp/protoc.zip && \
+    unzip /tmp/protoc.zip -d /usr/local && \
+    rm /tmp/protoc.zip
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+
+WORKDIR /app
+
+# Copy package manifests first for layer caching
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/db/package.json packages/db/package.json
+COPY packages/auth/package.json packages/auth/package.json
+COPY packages/grpc/package.json packages/grpc/package.json
+COPY packages/gateway/package.json packages/gateway/package.json
+COPY packages/orchestrator/package.json packages/orchestrator/package.json
+COPY packages/sandbox/package.json packages/sandbox/package.json
+COPY packages/a2a/package.json packages/a2a/package.json
+COPY packages/sdk/package.json packages/sdk/package.json
+COPY packages/adapters/slack/package.json packages/adapters/slack/package.json
+COPY packages/adapters/whatsapp/package.json packages/adapters/whatsapp/package.json
+COPY packages/skills/reports/package.json packages/skills/reports/package.json
+COPY apps/web/package.json apps/web/package.json
+
+RUN pnpm install --frozen-lockfile
+
+# Copy everything else
+COPY . .
+
+EXPOSE 4000 50051 50052
+
+CMD ["sleep", "infinity"]

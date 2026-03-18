@@ -1,0 +1,31 @@
+{
+  "name": "@openzosma/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "hono": "^4.7.6",
+    "@hono/node-server": "^1.14.1",
+    "@openzosma/db": "workspace:*",
+    "@openzosma/auth": "workspace:*",
+    "@openzosma/grpc": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

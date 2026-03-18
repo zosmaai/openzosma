@@ -1,0 +1,31 @@
+{
+  "name": "@openzosma/grpc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "generate": "tsx scripts/generate.ts",
+    "build": "npm run generate && tsc",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.12.6",
+    "@protobuf-ts/runtime": "^2.9.6",
+    "@protobuf-ts/runtime-rpc": "^2.9.6",
+    "@protobuf-ts/grpc-transport": "^2.9.6"
+  },
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.9.6",
+    "@types/node": "^22.15.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

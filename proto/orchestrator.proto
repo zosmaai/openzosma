@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package openzosma.orchestrator;
+
+service OrchestratorService {
+  rpc CreateSession(CreateSessionRequest) returns (Session);
+  rpc EndSession(EndSessionRequest) returns (Empty);
+  rpc SendMessage(SendMessageRequest) returns (stream AgentEvent);
+  rpc CancelTurn(CancelTurnRequest) returns (Empty);
+  rpc GetSession(GetSessionRequest) returns (Session);
+  rpc ListActiveSessions(ListActiveSessionsRequest) returns (SessionList);
+}
+
+message CreateSessionRequest {
+  string user_id = 1;
+  optional string agent_config_id = 2;
+  map<string, string> metadata = 3;
+}
+
+message EndSessionRequest {
+  string session_id = 1;
+}
+
+message SendMessageRequest {
+  string session_id = 1;
+  string content = 2;
+  repeated Attachment attachments = 3;
+}
+
+message CancelTurnRequest {
+  string session_id = 1;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message ListActiveSessionsRequest {}
+
+message Session {
+  string id = 1;
+  string user_id = 2;
+  string status = 3;
+  string sandbox_id = 4;
+  int64 created_at = 5;
+}
+
+message SessionList {
+  repeated Session sessions = 1;
+}
+
+message AgentEvent {
+  string type = 1;
+  optional string id = 2;
+  optional string text = 3;
+  optional string name = 4;
+  optional string input = 5;
+  optional string output = 6;
+}
+
+message Attachment {
+  string filename = 1;
+  string content_type = 2;
+  bytes data = 3;
+}
+
+message Empty {}

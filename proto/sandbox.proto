@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package openzosma.sandbox;
+
+service SandboxAgentService {
+  // Bidirectional: orchestrator sends user messages, sandbox streams agent events
+  rpc ProcessMessage(stream AgentMessage) returns (stream AgentEvent);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message AgentMessage {
+  string type = 1;    // "message", "cancel", "config"
+  optional string content = 2;
+  optional string config_json = 3;  // initial session config (tools, model, system prompt)
+}
+
+message AgentEvent {
+  string type = 1;
+  optional string id = 2;
+  optional string text = 3;
+  optional string name = 4;
+  optional string input = 5;
+  optional string output = 6;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string status = 2;
+}

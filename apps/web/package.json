@@ -1,0 +1,10 @@
+{
+  "name": "@openzosma/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Next.js app - Phase 7'",
+    "check": "echo 'Next.js app - Phase 7'",
+    "dev": "echo 'Next.js app - Phase 7'"
+  }
+}

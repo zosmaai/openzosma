@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.turbo/
+.env
+.env.local
+*.tsbuildinfo
+
+# Generated code
+packages/grpc/src/generated/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volumes
+pgdata/
+
+# Logs
+*.log

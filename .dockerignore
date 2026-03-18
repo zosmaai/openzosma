@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.turbo/
+.git/
+.env
+.env.*
+*.tsbuildinfo
+
+# Documentation (not needed in images)
+*.md
+docs/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Test artifacts
+coverage/
+
+# Infrastructure configs (not needed in app images)
+infra/k8s/
+
+# Lock files are included (pnpm-lock.yaml needed for install)
