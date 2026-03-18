@@ -27,6 +27,6 @@
 		}
 	},
 	"files": {
-		"ignore": ["node_modules", "dist", ".next", "**/generated/**", "*.proto", "*.sql"]
+		"ignore": ["node_modules", "dist", ".next", ".turbo", "**/generated/**", "*.proto", "*.sql"]
 	}
 }
