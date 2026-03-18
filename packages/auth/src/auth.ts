@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth"
-import pg from "pg"
+import type pg from "pg"
 
 export interface AuthConfig {
 	dbPool: pg.Pool

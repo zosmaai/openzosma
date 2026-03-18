@@ -38,11 +38,7 @@ export async function listConnections(pool: pg.Pool): Promise<Connection[]> {
 	return result.rows.map(mapConnection)
 }
 
-export async function updateConnectionSchemaCache(
-	pool: pg.Pool,
-	id: string,
-	schemaCache: unknown,
-): Promise<void> {
+export async function updateConnectionSchemaCache(pool: pg.Pool, id: string, schemaCache: unknown): Promise<void> {
 	await pool.query("UPDATE connections SET schema_cache = $1, updated_at = now() WHERE id = $2", [
 		JSON.stringify(schemaCache),
 		id,

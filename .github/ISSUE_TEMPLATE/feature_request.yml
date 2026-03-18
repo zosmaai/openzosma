@@ -1,0 +1,47 @@
+name: Feature Request
+description: Suggest a new feature or improvement.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the feature you'd like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature needed? What problem does it solve?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: packages
+    attributes:
+      label: Affected package(s)
+      description: Which package(s) would this affect?
+      multiple: true
+      options:
+        - gateway
+        - orchestrator
+        - sandbox
+        - db
+        - auth
+        - grpc
+        - a2a
+        - web
+        - sdk
+        - adapters/slack
+        - adapters/whatsapp
+        - skills/reports
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative approaches you've considered.

@@ -1,6 +1,6 @@
-import { runner } from "node-pg-migrate"
-import { fileURLToPath } from "node:url"
 import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+import { runner } from "node-pg-migrate"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -9,7 +9,7 @@ export async function runMigrations(direction: "up" | "down" = "up"): Promise<vo
 	await runner({
 		databaseUrl: {
 			host: process.env.DB_HOST ?? "localhost",
-			port: parseInt(process.env.DB_PORT ?? "5432"),
+			port: Number.parseInt(process.env.DB_PORT ?? "5432"),
 			database: process.env.DB_NAME ?? "openzosma",
 			user: process.env.DB_USER ?? "openzosma",
 			password: process.env.DB_PASS ?? "openzosma",
