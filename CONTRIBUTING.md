@@ -19,7 +19,35 @@ cd openzosma
 # Install dependencies
 pnpm install
 
-# Start infrastructure (PostgreSQL, Valkey, RabbitMQ)
+# Build all packages
+pnpm run build
+
+# Type check
+pnpm run check
+```
+
+### Running the MVP (Basic Q&A)
+
+The MVP runs a gateway server and Next.js dashboard with in-memory sessions and direct OpenAI streaming. No database, auth, or gRPC separation required.
+
+```bash
+# Terminal 1 — Gateway (port 4000)
+OPENAI_API_KEY=sk-... pnpm --filter @openzosma/gateway dev
+
+# Terminal 2 — Dashboard (port 3000)
+pnpm --filter @openzosma/web dev
+```
+
+Open http://localhost:3000, type a message, and see the streaming response. The gateway defaults to `gpt-4o-mini`. Set `GATEWAY_PORT` and `GATEWAY_HOST` to override defaults (4000 / 0.0.0.0).
+
+The dashboard connects to the gateway at `http://localhost:4000` by default. Set `NEXT_PUBLIC_GATEWAY_URL` to override.
+
+### Full Infrastructure Setup
+
+For features that require PostgreSQL, Valkey, and RabbitMQ (auth, persistence, event bus):
+
+```bash
+# Start infrastructure
 docker compose up -d
 
 # Copy environment config
@@ -31,12 +59,6 @@ pnpm db:migrate
 
 # Generate gRPC stubs from proto definitions
 pnpm proto:generate
-
-# Build all packages
-pnpm run build
-
-# Type check
-pnpm run check
 ```
 
 ### Using the Dev Container
@@ -58,7 +80,14 @@ This gives you a shell with Node.js 22, pnpm, protoc, and build tools pre-instal
 Copy `.env.example` to `.env` and fill in:
 
 ```bash
-# Database
+# Required for MVP
+OPENAI_API_KEY=sk-...
+
+# Gateway (defaults shown)
+GATEWAY_PORT=4000
+GATEWAY_HOST=0.0.0.0
+
+# Database (required for full setup, not MVP)
 DATABASE_URL=postgresql://openzosma:openzosma@localhost:5432/openzosma
 
 # Valkey (Redis-compatible)

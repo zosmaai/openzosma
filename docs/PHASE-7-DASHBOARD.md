@@ -4,6 +4,42 @@
 **Priority:** P1
 **Depends on:** Phase 3 (gateway), Phase 4 (orchestrator)
 
+## Current Implementation (MVP)
+
+A basic chat page is functional to support the end-to-end MVP flow:
+
+| Feature | Status |
+|---|---|
+| Next.js 15 + React 19 + Tailwind CSS 4 setup | Done |
+| `postcss.config.mjs` with `@tailwindcss/postcss` | Done |
+| Root layout with dark theme | Done |
+| `/` redirect to `/chat` | Done |
+| `/chat` -- WebSocket chat with streaming | Done |
+| Session creation on mount (REST) | Done |
+| Real-time streaming via WebSocket | Done |
+| Cancel support | Not yet |
+| Session sidebar / session list | Not yet |
+| Auth pages (`/login`, `/register`) | Not yet |
+| Dashboard overview (`/dashboard`) | Not yet |
+| Session history (`/sessions`) | Not yet |
+| Agent config (`/agents`) | Not yet |
+| Connections (`/connections`) | Not yet |
+| Settings (`/settings`) | Not yet |
+| shadcn/ui components | Not yet |
+| TanStack Query | Not yet |
+| `@openzosma/sdk` integration | Not yet |
+| Responsive design | Not yet |
+
+**Files:**
+- `apps/web/package.json` -- Next.js 15, React 19, Tailwind 4
+- `apps/web/tsconfig.json` -- Next.js TypeScript config (bundler resolution)
+- `apps/web/next.config.ts` -- Minimal config
+- `apps/web/postcss.config.mjs` -- Tailwind CSS 4 PostCSS plugin
+- `apps/web/src/app/globals.css` -- Tailwind import + dark theme CSS variables
+- `apps/web/src/app/layout.tsx` -- Root layout
+- `apps/web/src/app/page.tsx` -- Redirect to `/chat`
+- `apps/web/src/app/chat/page.tsx` -- Chat page with WebSocket streaming
+
 ## Goal
 
 Build a Next.js web dashboard for admins and users. The dashboard is a pure client -- it consumes the OpenZosma REST and WebSocket APIs. No API routes in the critical path.

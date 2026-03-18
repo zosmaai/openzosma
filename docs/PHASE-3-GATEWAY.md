@@ -4,6 +4,33 @@
 **Priority:** P0
 **Depends on:** Phase 2 (monorepo, DB, auth, gRPC)
 
+## Current Implementation (MVP)
+
+The gateway MVP is functional with a reduced scope to get the end-to-end flow working:
+
+| Feature | Status |
+|---|---|
+| Hono HTTP server (`@hono/node-server`) | Done |
+| REST: `POST /api/v1/sessions`, `GET /api/v1/sessions/:id`, `POST /api/v1/sessions/:id/messages`, `GET /api/v1/sessions/:id/messages` | Done |
+| WebSocket (`/ws`) with `ws` package (`noServer` mode) | Done |
+| In-memory session management (`SessionManager` class) | Done |
+| OpenAI streaming (gpt-4o-mini, via `openai` SDK) | Done |
+| CORS (localhost:3000) | Done |
+| Health check (`GET /health`) | Done |
+| Auth middleware | Not yet |
+| gRPC client to orchestrator | Not yet (gateway calls OpenAI directly) |
+| A2A protocol | Not yet |
+| SSE endpoint | Not yet |
+| Valkey pub/sub fan-out | Not yet |
+| Rate limiting | Not yet |
+
+**Files:**
+- `packages/gateway/src/index.ts` -- Entry point, Hono server + WebSocket setup
+- `packages/gateway/src/app.ts` -- Hono routes (REST API)
+- `packages/gateway/src/session-manager.ts` -- In-memory sessions, OpenAI streaming
+- `packages/gateway/src/ws.ts` -- WebSocket message handler, cancel support
+- `packages/gateway/src/types.ts` -- AgentEvent, WsClientMessage, Session types
+
 ## Goal
 
 Build a single Hono HTTP server that exposes REST, WebSocket, and A2A protocol endpoints. This is the only external-facing service. All client communication goes through the gateway. Internally, the gateway communicates with the orchestrator via gRPC.

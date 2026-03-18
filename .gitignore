@@ -8,6 +8,10 @@ dist/
 # Generated code
 packages/grpc/src/generated/
 
+# Next.js
+.next/
+next-env.d.ts
+
 # OS
 .DS_Store
 Thumbs.db

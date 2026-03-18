@@ -1,5 +1,33 @@
 # Architecture
 
+## Current State (MVP)
+
+The MVP implements the minimum end-to-end flow: user types a question in the dashboard, gets a streaming LLM response back.
+
+```
+Dashboard (Next.js :3000)
+     |
+     WebSocket (/ws) + REST (/api/v1/*)
+     |
+Gateway (Hono :4000)
+     |
+     OpenAI API (streaming, gpt-4o-mini)
+```
+
+**What is implemented:**
+- Gateway: Hono HTTP server with REST endpoints and WebSocket (`ws` package, `noServer` mode)
+- In-memory sessions (no database persistence)
+- Direct OpenAI streaming via `openai` SDK
+- No auth (open access)
+- No gRPC separation (gateway and session logic in one process)
+- Dashboard: Next.js 15 + React 19 + Tailwind CSS 4, single chat page at `/chat`
+
+**What is planned (see below for full design):**
+- Auth (Better Auth), database persistence, gRPC gateway-orchestrator split
+- NemoClaw sandbox isolation, Valkey pub/sub, RabbitMQ event bus
+- A2A protocol, SSE streaming, channel adapters (Slack, WhatsApp)
+- Full dashboard (sessions list, agents config, connections, settings)
+
 ## System Overview
 
 OpenZosma is a self-hosted AI agent platform. The backend is a standalone TypeScript service. Clients (Next.js dashboard, React Native app, WhatsApp bot, Slack bot, external A2A agents) are independent consumers connected via REST, WebSocket, or A2A protocol. Internal services communicate via gRPC.

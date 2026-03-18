@@ -13,7 +13,28 @@ Built on top of [pi-mono](https://github.com/badlogic/pi-mono) (TypeScript agent
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - [NemoClaw CLI](https://github.com/NVIDIA/NemoClaw) (for sandbox development)
 
-### Quick Start
+### Quick Start (MVP)
+
+The fastest way to get a working end-to-end flow (ask a question, get a streaming LLM response):
+
+```bash
+git clone https://github.com/zosmaai/openzosma.git
+cd openzosma
+pnpm install
+pnpm run build
+
+# Terminal 1 — Gateway (port 4000)
+OPENAI_API_KEY=sk-... pnpm --filter @openzosma/gateway dev
+
+# Terminal 2 — Dashboard (port 3000)
+pnpm --filter @openzosma/web dev
+```
+
+Open http://localhost:3000, type a message, and see the streaming response.
+
+The MVP gateway uses in-memory sessions and calls OpenAI directly (no database, no auth, no gRPC separation). See [ARCHITECTURE.md](./ARCHITECTURE.md) for details on what is implemented vs. planned.
+
+### Full Setup
 
 ```bash
 # Clone the repo
@@ -146,11 +167,11 @@ openzosma/
 |-------|-------------|----------|--------|
 | [Phase 1](./docs/PHASE-1-MULTITENANT.md) | Multi-instance pi-agent refactor (in pi-mono) | 3-4 days | Complete |
 | [Phase 2](./docs/PHASE-2-MONOREPO.md) | OpenZosma monorepo setup + DB schema + auth | 1 week | Complete |
-| [Phase 3](./docs/PHASE-3-GATEWAY.md) | API Gateway + A2A + gRPC server | 1 week | Not started |
+| [Phase 3](./docs/PHASE-3-GATEWAY.md) | API Gateway + A2A + gRPC server | 1 week | In progress (MVP) |
 | [Phase 4](./docs/PHASE-4-ORCHESTRATOR.md) | Orchestrator + NemoClaw sandbox integration | 1.5 weeks | Not started |
 | [Phase 5](./docs/PHASE-5-ADAPTERS.md) | Channel adapters (Slack, WhatsApp) | 1 week | Not started |
 | [Phase 6](./docs/PHASE-6-SKILLS.md) | Enterprise skills (database tool, reports) | 2 weeks | Not started |
-| [Phase 7](./docs/PHASE-7-DASHBOARD.md) | Web dashboard (Next.js) | 2 weeks | Not started |
+| [Phase 7](./docs/PHASE-7-DASHBOARD.md) | Web dashboard (Next.js) | 2 weeks | In progress (MVP) |
 
 **MVP (Phases 1-4):** ~4 weeks
 **Full platform (Phases 1-7):** ~10 weeks
