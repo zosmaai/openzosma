@@ -5,22 +5,38 @@ import { useCallback, useEffect, useRef, useState } from "react"
 const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:4000"
 const WS_URL = `${GATEWAY_URL.replace(/^http/, "ws")}/ws`
 
-interface Message {
+interface ToolCall {
+	id: string
+	name: string
+	args: string
+	result?: string
+	isError?: boolean
+	status: "running" | "done"
+}
+
+interface ChatMessage {
 	id: string
 	role: "user" | "assistant"
 	content: string
+	thinking?: string
+	toolCalls?: ToolCall[]
 }
 
-interface AgentEvent {
+interface GatewayEvent {
 	type: string
 	id?: string
 	text?: string
 	error?: string
+	toolName?: string
+	toolCallId?: string
+	toolArgs?: string
+	toolResult?: string
+	isToolError?: boolean
 }
 
 export default function ChatPage() {
 	const [sessionId, setSessionId] = useState<string | null>(null)
-	const [messages, setMessages] = useState<Message[]>([])
+	const [messages, setMessages] = useState<ChatMessage[]>([])
 	const [input, setInput] = useState("")
 	const [isStreaming, setIsStreaming] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -28,6 +44,7 @@ export default function ChatPage() {
 	const wsRef = useRef<WebSocket | null>(null)
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const streamBufferRef = useRef("")
+	const thinkingBufferRef = useRef("")
 	const messagesLenRef = useRef(0)
 
 	// Scroll to bottom when messages change
@@ -57,8 +74,8 @@ export default function ChatPage() {
 				wsRef.current = ws
 
 				ws.onmessage = (event) => {
-					const msg: AgentEvent = JSON.parse(event.data)
-					handleAgentEvent(msg)
+					const msg: GatewayEvent = JSON.parse(event.data)
+					handleGatewayEvent(msg)
 				}
 
 				ws.onerror = () => {
@@ -83,15 +100,19 @@ export default function ChatPage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
-	const handleAgentEvent = useCallback((event: AgentEvent) => {
+	const handleGatewayEvent = useCallback((event: GatewayEvent) => {
 		switch (event.type) {
 			case "turn_start":
 				setIsStreaming(true)
 				streamBufferRef.current = ""
+				thinkingBufferRef.current = ""
 				break
 
 			case "message_start":
-				setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: "" }])
+				setMessages((prev) => [
+					...prev,
+					{ id: event.id ?? crypto.randomUUID(), role: "assistant", content: "" },
+				])
 				break
 
 			case "message_update":
@@ -109,7 +130,64 @@ export default function ChatPage() {
 				}
 				break
 
+			case "thinking_update":
+				if (event.text) {
+					thinkingBufferRef.current += event.text
+					const currentThinking = thinkingBufferRef.current
+					setMessages((prev) => {
+						const updated = [...prev]
+						const last = updated[updated.length - 1]
+						if (last && last.role === "assistant") {
+							updated[updated.length - 1] = { ...last, thinking: currentThinking }
+						}
+						return updated
+					})
+				}
+				break
+
 			case "message_end":
+				break
+
+			case "tool_call_start":
+				if (event.toolCallId && event.toolName) {
+					const newToolCall: ToolCall = {
+						id: event.toolCallId,
+						name: event.toolName,
+						args: event.toolArgs ?? "",
+						status: "running",
+					}
+					setMessages((prev) => {
+						const updated = [...prev]
+						const last = updated[updated.length - 1]
+						if (last && last.role === "assistant") {
+							const toolCalls = [...(last.toolCalls ?? []), newToolCall]
+							updated[updated.length - 1] = { ...last, toolCalls }
+						}
+						return updated
+					})
+				}
+				break
+
+			case "tool_call_update":
+				// Currently no partial result display; could be extended later
+				break
+
+			case "tool_call_end":
+				if (event.toolCallId) {
+					setMessages((prev) => {
+						const updated = [...prev]
+						const last = updated[updated.length - 1]
+						if (last && last.role === "assistant" && last.toolCalls) {
+							const toolCalls = last.toolCalls.map((tc) =>
+								tc.id === event.toolCallId
+									? { ...tc, result: event.toolResult, isError: event.isToolError, status: "done" as const }
+									: tc,
+							)
+							updated[updated.length - 1] = { ...last, toolCalls }
+						}
+						return updated
+					})
+				}
 				break
 
 			case "turn_end":
@@ -166,11 +244,53 @@ export default function ChatPage() {
 				{messages.map((msg) => (
 					<div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
 						<div
-							className={`max-w-[80%] rounded-lg px-4 py-2 whitespace-pre-wrap ${
+							className={`max-w-[80%] rounded-lg px-4 py-2 ${
 								msg.role === "user" ? "bg-[var(--accent)] text-white" : "bg-[var(--muted)] text-[var(--foreground)]"
 							}`}
 						>
-							{msg.content}
+							{/* Thinking block */}
+							{msg.thinking && (
+								<details className="mb-2 text-xs text-[var(--muted-foreground)]">
+									<summary className="cursor-pointer select-none font-medium">Thinking...</summary>
+									<pre className="mt-1 whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+										{msg.thinking}
+									</pre>
+								</details>
+							)}
+
+							{/* Tool calls */}
+							{msg.toolCalls && msg.toolCalls.length > 0 && (
+								<div className="mb-2 space-y-1">
+									{msg.toolCalls.map((tc) => (
+										<details key={tc.id} className="text-xs border border-[var(--border)] rounded p-2">
+											<summary className="cursor-pointer select-none font-medium">
+												{tc.status === "running" ? "Running" : tc.isError ? "Failed" : "Done"}
+												{": "}
+												{tc.name}
+											</summary>
+											{tc.args && (
+												<pre className="mt-1 whitespace-pre-wrap break-words text-[var(--muted-foreground)] max-h-32 overflow-y-auto">
+													{tc.args}
+												</pre>
+											)}
+											{tc.result !== undefined && (
+												<pre
+													className={`mt-1 whitespace-pre-wrap break-words max-h-32 overflow-y-auto ${
+														tc.isError ? "text-red-400" : "text-[var(--muted-foreground)]"
+													}`}
+												>
+													{tc.result}
+												</pre>
+											)}
+										</details>
+									))}
+								</div>
+							)}
+
+							{/* Message content */}
+							<div className="whitespace-pre-wrap">{msg.content}</div>
+
+							{/* Streaming cursor */}
 							{msg.role === "assistant" && !msg.content && isStreaming && (
 								<span className="inline-block w-2 h-4 bg-[var(--muted-foreground)] animate-pulse" />
 							)}

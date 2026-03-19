@@ -27,3 +27,6 @@ pgdata/
 
 # Logs
 *.log
+
+# Agent session workspaces
+workspace/
