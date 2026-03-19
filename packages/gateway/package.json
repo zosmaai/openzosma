@@ -19,9 +19,7 @@
 	"dependencies": {
 		"hono": "^4.7.6",
 		"@hono/node-server": "^1.14.1",
-		"@mariozechner/pi-agent-core": "^0.60.0",
-		"@mariozechner/pi-ai": "^0.60.0",
-		"@mariozechner/pi-coding-agent": "^0.60.0",
+		"@openzosma/agents": "workspace:*",
 		"ws": "^8.18.1",
 		"@openzosma/db": "workspace:*",
 		"@openzosma/auth": "workspace:*",

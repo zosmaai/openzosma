@@ -91,6 +91,25 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  packages/agents:
+    dependencies:
+      '@mariozechner/pi-agent-core':
+        specifier: ^0.60.0
+        version: 0.60.0(ws@8.19.0)(zod@4.3.6)
+      '@mariozechner/pi-ai':
+        specifier: ^0.60.0
+        version: 0.60.0(ws@8.19.0)(zod@4.3.6)
+      '@mariozechner/pi-coding-agent':
+        specifier: ^0.60.0
+        version: 0.60.0(ws@8.19.0)(zod@4.3.6)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.2
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/auth:
     dependencies:
       '@openzosma/db':
@@ -140,15 +159,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.14.1
         version: 1.19.11(hono@4.12.8)
-      '@mariozechner/pi-agent-core':
-        specifier: ^0.60.0
-        version: 0.60.0(ws@8.19.0)(zod@4.3.6)
-      '@mariozechner/pi-ai':
-        specifier: ^0.60.0
-        version: 0.60.0(ws@8.19.0)(zod@4.3.6)
-      '@mariozechner/pi-coding-agent':
-        specifier: ^0.60.0
-        version: 0.60.0(ws@8.19.0)(zod@4.3.6)
+      '@openzosma/agents':
+        specifier: workspace:*
+        version: link:../agents
       '@openzosma/auth':
         specifier: workspace:*
         version: link:../auth
