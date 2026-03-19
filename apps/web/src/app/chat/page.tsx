@@ -109,10 +109,7 @@ export default function ChatPage() {
 				break
 
 			case "message_start":
-				setMessages((prev) => [
-					...prev,
-					{ id: event.id ?? crypto.randomUUID(), role: "assistant", content: "" },
-				])
+				setMessages((prev) => [...prev, { id: event.id ?? crypto.randomUUID(), role: "assistant", content: "" }])
 				break
 
 			case "message_update":
@@ -252,9 +249,7 @@ export default function ChatPage() {
 							{msg.thinking && (
 								<details className="mb-2 text-xs text-[var(--muted-foreground)]">
 									<summary className="cursor-pointer select-none font-medium">Thinking...</summary>
-									<pre className="mt-1 whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
-										{msg.thinking}
-									</pre>
+									<pre className="mt-1 whitespace-pre-wrap break-words max-h-40 overflow-y-auto">{msg.thinking}</pre>
 								</details>
 							)}
 

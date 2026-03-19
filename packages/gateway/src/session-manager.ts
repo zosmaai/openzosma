@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { mkdirSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { Agent, type AgentEvent as PiAgentEvent } from "@mariozechner/pi-agent-core"
-import { getEnvApiKey, getModel, getProviders, getModels } from "@mariozechner/pi-ai"
+import { getEnvApiKey, getModel, getModels, getProviders } from "@mariozechner/pi-ai"
 import type { Api, Model } from "@mariozechner/pi-ai"
 import {
 	convertToLlm,
@@ -52,9 +52,7 @@ function resolveModel(): { model: Model<Api>; apiKey: string } {
 		}
 		const apiKey = getEnvApiKey(explicitProvider)
 		if (!apiKey) {
-			throw new Error(
-				`No API key found for provider "${explicitProvider}". Set the appropriate environment variable.`,
-			)
+			throw new Error(`No API key found for provider "${explicitProvider}". Set the appropriate environment variable.`)
 		}
 		return { model, apiKey }
 	}
