@@ -73,9 +73,9 @@ const ChatView = () => {
 
 	return (
 		<div className="relative flex flex-col h-full w-full">
-			{/* Empty state: centered input */}
-			<AnimatePresence>
-				{!hasmessages && (
+			<AnimatePresence mode="wait">
+				{!hasmessages ? (
+					/* Empty state: centered input */
 					<motion.div
 						key="empty-state"
 						initial={{ opacity: 1, y: 0 }}
@@ -100,12 +100,8 @@ const ChatView = () => {
 							/>
 						</div>
 					</motion.div>
-				)}
-			</AnimatePresence>
-
-			{/* Conversation layout: messages + docked input + optional files panel */}
-			<AnimatePresence>
-				{hasmessages && (
+				) : (
+					/* Conversation layout: messages + docked input + optional files panel */
 					<motion.div
 						key="conversation-state"
 						initial={{ opacity: 0 }}

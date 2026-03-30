@@ -363,6 +363,21 @@ export class SandboxHttpClient {
 					}
 				}
 			}
+
+			// Flush any remaining data left in the buffer after stream ends.
+			// The last SSE event (typically turn_end) may not have a trailing
+			// blank line before the connection closes.
+			if (buffer.startsWith("data:")) {
+				currentData += buffer.slice(5).trimStart()
+			}
+			if (currentData) {
+				try {
+					const event = JSON.parse(currentData) as AgentStreamEvent
+					yield event
+				} catch (e) {
+					log.error("parseSSE flush error", { error: e instanceof Error ? e.message : String(e) })
+				}
+			}
 		} finally {
 			reader.releaseLock()
 		}

@@ -53,7 +53,7 @@ const ChatSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
 			{/* Header */}
 			<div className="flex items-center justify-between p-4 border-b shrink-0">
 				<h3 className="font-semibold text-sm">Conversations</h3>
-				<Button size="icon-sm" variant="ghost">
+				<Button size="icon-sm" variant="ghost" asChild>
 					<Link href="/chat">
 						<IconPlus className="size-4" />
 					</Link>
@@ -85,7 +85,7 @@ const ChatSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
 								{search ? "No matching conversations" : "No conversations yet"}
 							</p>
 							{!search && (
-								<Button size="sm" variant="outline" className="text-xs">
+								<Button size="sm" variant="outline" className="text-xs" asChild>
 									<Link href="/chat">
 										<IconPlus className="size-3" />
 										Start a conversation
