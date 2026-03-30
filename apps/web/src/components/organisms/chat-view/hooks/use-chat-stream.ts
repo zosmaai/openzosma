@@ -154,12 +154,25 @@ const useChatStream = (
 
 				await new Promise<void>((resolve, reject) => {
 					ws.onopen = () => {
+						// Build attachments array from file parts
+						const attachments =
+							message.files.length > 0
+								? message.files
+										.filter((f) => f.url)
+										.map((f) => ({
+											filename: f.filename || "file",
+											mediaType: f.mediaType || "application/octet-stream",
+											dataUrl: f.url,
+										}))
+								: undefined
+
 						ws.send(
 							JSON.stringify({
 								type: "message",
 								sessionId: conversationid,
 								content: message.text,
 								userId: session?.user?.id,
+								attachments,
 							}),
 						)
 					}

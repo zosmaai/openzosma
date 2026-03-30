@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server"
 import { createAuthFromEnv } from "@openzosma/auth"
 import { createPool } from "@openzosma/db"
 import { createLogger } from "@openzosma/logger"
+import type { OrchestratorSessionManager } from "@openzosma/orchestrator"
 import { WebSocketServer } from "ws"
 import { initAdapters } from "./adapters.js"
 import { createApp } from "./app.js"
@@ -20,7 +21,10 @@ const SANDBOX_MODE = process.env.OPENZOSMA_SANDBOX_MODE || "local"
 // return empty skills. In orchestrator mode the pool is required.
 const pool = (process.env.DATABASE_URL ?? process.env.DB_HOST) ? createPool() : undefined
 
-async function createSessionManager(): Promise<SessionManager> {
+/** Orchestrator reference, set when SANDBOX_MODE=orchestrator. */
+let orchestrator: OrchestratorSessionManager | undefined
+
+const createSessionManager = async (): Promise<SessionManager> => {
 	if (SANDBOX_MODE === "orchestrator") {
 		if (!pool) {
 			throw new Error(
@@ -29,12 +33,31 @@ async function createSessionManager(): Promise<SessionManager> {
 			)
 		}
 
-		const { SandboxManager, OrchestratorSessionManager, loadConfigFromEnv } = await import("@openzosma/orchestrator")
+		const { SandboxManager, OrchestratorSessionManager, loadConfigFromEnv, startHealthCheckLoop } = await import(
+			"@openzosma/orchestrator"
+		)
 		const config = loadConfigFromEnv()
+
 		const sandboxManager = new SandboxManager(pool, { config })
-		const orchestrator = new OrchestratorSessionManager(pool, sandboxManager)
+		orchestrator = new OrchestratorSessionManager(pool, sandboxManager)
 
 		log.info("Sandbox mode: orchestrator (per-user OpenShell sandboxes)")
+
+		// Start background health check loop to detect dead sandboxes
+		// and suspend idle ones
+		startHealthCheckLoop(sandboxManager, config.healthCheckIntervalMs ?? 60_000, {
+			onHealthCheckComplete: (unhealthy) => {
+				log.warn("Unhealthy sandboxes detected", { count: unhealthy.length, sandboxes: unhealthy })
+			},
+			onIdleSuspended: (suspended) => {
+				log.info("Idle sandboxes suspended", { count: suspended.length, users: suspended })
+			},
+			onError: (err) => {
+				const msg = err instanceof Error ? err.message : String(err)
+				log.error("Health check loop error", { error: msg })
+			},
+		})
+
 		return new SessionManager({ pool, orchestrator })
 	}
 
@@ -44,7 +67,7 @@ async function createSessionManager(): Promise<SessionManager> {
 
 const sessionManager = await createSessionManager()
 const auth = pool ? createAuthFromEnv() : undefined
-const app = createApp(sessionManager, pool, auth)
+const app = createApp(sessionManager, pool, auth, orchestrator)
 
 const server = serve({ fetch: app.fetch, port: PORT, hostname: HOST }, () => {
 	log.info(`Gateway listening on ${HOST}:${PORT}`)

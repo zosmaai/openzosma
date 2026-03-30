@@ -3,34 +3,11 @@
 import { Button } from "@/src/components/ui/button"
 import { ScrollArea } from "@/src/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip"
-import { DownloadIcon, EyeIcon, FileIcon, FileJsonIcon, FileTextIcon, ImageIcon, XIcon } from "lucide-react"
+import { formatSizeBytes, getFileIcon, isPreviewable } from "@/src/utils/file-utils"
+import { DownloadIcon, ExternalLinkIcon, EyeIcon, FileIcon, XIcon } from "lucide-react"
+import Link from "next/link"
 import { useParams } from "next/navigation"
 import type { FileArtifact } from "./types"
-
-function formatSizeBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function getFileIcon(mediatype: string) {
-	if (mediatype.startsWith("image/")) return <ImageIcon className="size-4 text-blue-500" />
-	if (mediatype === "application/json") return <FileJsonIcon className="size-4 text-yellow-500" />
-	if (mediatype === "text/html") return <FileTextIcon className="size-4 text-orange-500" />
-	if (mediatype.startsWith("text/")) return <FileTextIcon className="size-4 text-muted-foreground" />
-	return <FileIcon className="size-4 text-muted-foreground" />
-}
-
-function isPreviewable(mediatype: string): boolean {
-	return (
-		mediatype.startsWith("image/") ||
-		mediatype === "text/html" ||
-		mediatype === "text/plain" ||
-		mediatype === "text/markdown" ||
-		mediatype === "text/csv" ||
-		mediatype === "application/json"
-	)
-}
 
 type FilesPanelProps = {
 	artifacts: FileArtifact[]
@@ -61,7 +38,7 @@ const FilesPanel = ({ artifacts, onClose, onPreview }: FilesPanelProps) => {
 			</div>
 
 			{/* File list */}
-			<ScrollArea className="flex-1">
+			<ScrollArea className="flex-1 h-0">
 				{artifacts.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-12 px-4 text-center">
 						<FileIcon className="size-8 text-muted-foreground/30 mb-3" />
@@ -118,6 +95,19 @@ const FilesPanel = ({ artifacts, onClose, onPreview }: FilesPanelProps) => {
 					</div>
 				)}
 			</ScrollArea>
+
+			{/* Link to Files page */}
+			{artifacts.length > 0 && (
+				<div className="border-t px-4 py-2.5 shrink-0">
+					<Link
+						href="/files"
+						className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+					>
+						<ExternalLinkIcon className="size-3" />
+						View all in Files
+					</Link>
+				</div>
+			)}
 		</div>
 	)
 }

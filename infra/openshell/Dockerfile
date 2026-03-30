@@ -29,15 +29,19 @@ WORKDIR /build
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/sandbox-server/package.json packages/sandbox-server/
 COPY packages/agents/package.json packages/agents/
+COPY packages/logger/package.json packages/logger/
+COPY packages/memory/package.json packages/memory/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
+COPY packages/logger/ packages/logger/
 COPY packages/agents/ packages/agents/
 COPY packages/memory/ packages/memory/
 COPY packages/sandbox-server/ packages/sandbox-server/
 
+RUN pnpm --filter @openzosma/logger run build
 RUN pnpm --filter @openzosma/agents run build
 RUN pnpm --filter @openzosma/sandbox-server run build
 

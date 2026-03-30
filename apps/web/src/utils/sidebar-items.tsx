@@ -1,5 +1,5 @@
 // ICONS
-import { IconArrowLeft, IconMessageCircle, IconPlug, IconSettings } from "@tabler/icons-react"
+import { IconArrowLeft, IconFiles, IconMessageCircle, IconPlug, IconSettings } from "@tabler/icons-react"
 
 type SidebarItem = {
 	id: string
@@ -18,6 +18,12 @@ export const getSidebarItems = (): SidebarItem[] => [
 		href: "/chat",
 		icon: <IconMessageCircle className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
 		hasflyout: true,
+	},
+	{
+		id: "files",
+		label: "Files",
+		href: "/files",
+		icon: <IconFiles className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
 	},
 	{
 		id: "integrations",

@@ -1,37 +1,10 @@
-import { type Stats, readdirSync, statSync } from "node:fs"
-import { extname, join, relative } from "node:path"
-
-/**
- * Extensions considered user-facing output (case-insensitive).
- * Files with these extensions are promoted to artifacts.
- */
-const OUTPUT_EXTENSIONS = new Set([
-	".html",
-	".pdf",
-	".csv",
-	".xlsx",
-	".xls",
-	".png",
-	".jpg",
-	".jpeg",
-	".gif",
-	".svg",
-	".txt",
-	".md",
-	".json",
-	".xml",
-])
+import { type Stats, copyFileSync, mkdirSync, readdirSync, statSync } from "node:fs"
+import { dirname, extname, join, relative } from "node:path"
 
 /**
  * Directories to exclude when scanning the workspace.
  */
-const EXCLUDED_DIRS = new Set([".knowledge-base", ".git", "node_modules", "__pycache__", ".venv"])
-
-/**
- * Subdirectory that the agent can use to explicitly mark files as output,
- * regardless of extension.
- */
-const OUTPUT_DIR = "output"
+const EXCLUDED_DIRS = new Set([".knowledge-base", ".git", "node_modules", "__pycache__", ".venv", "user-files"])
 
 export interface FileSnapshot {
 	/** Relative path from workspace root. */
@@ -55,6 +28,17 @@ export interface DetectedFile {
 	mediatype: string
 }
 
+export interface FileArtifactEvent {
+	/** Filename for display. */
+	filename: string
+	/** MIME type. */
+	mediatype: string
+	/** Size in bytes. */
+	sizebytes: number
+	/** Base64-encoded file content (no longer populated; kept for type compatibility). */
+	content?: string
+}
+
 /** Maps file extensions to MIME types. */
 const MIME_MAP: Record<string, string> = {
 	".html": "text/html",
@@ -73,7 +57,7 @@ const MIME_MAP: Record<string, string> = {
 	".xml": "application/xml",
 }
 
-function mimeFromExtension(filepath: string): string {
+const mimeFromExtension = (filepath: string): string => {
 	const ext = extname(filepath).toLowerCase()
 	return MIME_MAP[ext] ?? "application/octet-stream"
 }
@@ -82,7 +66,7 @@ function mimeFromExtension(filepath: string): string {
  * Recursively walks a directory and returns file entries.
  * Skips excluded directories.
  */
-function walkDir(dir: string, baseDir: string): { relativePath: string; absolutePath: string; stat: Stats }[] {
+const walkDir = (dir: string, baseDir: string): { relativePath: string; absolutePath: string; stat: Stats }[] => {
 	const results: { relativePath: string; absolutePath: string; stat: Stats }[] = []
 
 	let entries: string[]
@@ -117,30 +101,13 @@ function walkDir(dir: string, baseDir: string): { relativePath: string; absolute
 }
 
 /**
- * Returns true if a file qualifies as a user-facing artifact.
- *
- * A file qualifies if:
- * 1. It lives inside the `output/` subdirectory (any extension), OR
- * 2. Its extension is in the OUTPUT_EXTENSIONS whitelist.
+ * Creates a snapshot of all files in a workspace directory.
+ * All files (except those in excluded directories) are tracked.
  */
-function isOutputFile(relativePath: string): boolean {
-	// Check if file is inside the output/ directory
-	if (relativePath.startsWith(`${OUTPUT_DIR}/`) || relativePath.startsWith(`${OUTPUT_DIR}\\`)) {
-		return true
-	}
-
-	const ext = extname(relativePath).toLowerCase()
-	return OUTPUT_EXTENSIONS.has(ext)
-}
-
-/**
- * Creates a snapshot of all qualifying output files in a workspace directory.
- */
-export function createSnapshot(workspaceDir: string): Map<string, FileSnapshot> {
+export const createSnapshot = (workspaceDir: string): Map<string, FileSnapshot> => {
 	const snapshot = new Map<string, FileSnapshot>()
 
 	for (const { relativePath, stat } of walkDir(workspaceDir, workspaceDir)) {
-		if (!isOutputFile(relativePath)) continue
 		snapshot.set(relativePath, {
 			relativePath,
 			mtimeMs: stat.mtimeMs,
@@ -155,16 +122,15 @@ export function createSnapshot(workspaceDir: string): Map<string, FileSnapshot> 
  * Compares the current state of a workspace against a previous snapshot.
  * Returns newly created or modified files that qualify as output.
  */
-export function detectChanges(
+export const detectChanges = (
 	workspaceDir: string,
 	previousSnapshot: Map<string, FileSnapshot>,
-): { newSnapshot: Map<string, FileSnapshot>; changedFiles: DetectedFile[] } {
+): { newSnapshot: Map<string, FileSnapshot>; changedFiles: DetectedFile[] } => {
 	const newSnapshot = createSnapshot(workspaceDir)
 	const changedFiles: DetectedFile[] = []
 
 	for (const [relPath, current] of newSnapshot) {
 		const prev = previousSnapshot.get(relPath)
-		// New file or modified file (mtime or size changed)
 		if (!prev || prev.mtimeMs !== current.mtimeMs || prev.sizebytes !== current.sizebytes) {
 			const absolutePath = join(workspaceDir, relPath)
 			const filename = relPath.split("/").pop() ?? relPath
@@ -179,4 +145,47 @@ export function detectChanges(
 	}
 
 	return { newSnapshot, changedFiles }
+}
+
+/**
+ * Convert detected files into artifact event payloads (metadata only).
+ *
+ * Base64 content is intentionally omitted — the gateway strips it anyway
+ * (artifacts are already accessible via the user-files API).
+ */
+export const buildArtifactEvents = (detectedFiles: DetectedFile[]): FileArtifactEvent[] => {
+	return detectedFiles.map((file) => ({
+		filename: file.filename,
+		mediatype: file.mediatype,
+		sizebytes: file.sizebytes,
+	}))
+}
+
+const WORKSPACE_DIR = process.env.OPENZOSMA_WORKSPACE ?? "/workspace"
+const USER_FILES_DIR = join(WORKSPACE_DIR, "user-files")
+
+/**
+ * Copy detected artifact files into /workspace/user-files/ai-generated/<folderName>/.
+ *
+ * Preserves the relative directory structure so cloned repos, nested project
+ * outputs, etc. are browsable like a normal file manager.
+ *
+ * The EXCLUDED_DIRS set already contains "user-files", so copied files
+ * won't be re-detected on subsequent scans.
+ */
+export const copyArtifactsToUserFiles = (folderName: string, detectedFiles: DetectedFile[]): void => {
+	if (detectedFiles.length === 0) return
+
+	const targetDir = join(USER_FILES_DIR, "ai-generated", folderName)
+	mkdirSync(targetDir, { recursive: true })
+
+	for (const file of detectedFiles) {
+		const destPath = join(targetDir, file.relativePath)
+		try {
+			mkdirSync(dirname(destPath), { recursive: true })
+			copyFileSync(file.absolutePath, destPath)
+		} catch {
+			// Skip files that can't be copied (e.g. already removed)
+		}
+	}
 }

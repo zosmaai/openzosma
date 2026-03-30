@@ -49,11 +49,32 @@ export class SandboxManager {
 	private readonly locks = new Map<string, Promise<SandboxState>>()
 	/** Ports currently allocated to sandboxes. */
 	private readonly allocatedPorts = new Set<number>()
+	/**
+	 * Optional hook called after sandbox creation succeeds and before the
+	 * sandbox is marked "ready". The hook receives the sandbox name, userId,
+	 * and the OpenShellClient so it can upload user files into the sandbox.
+	 *
+	 * Set via the constructor. Used by the gateway to mount user-uploaded
+	 * files into /workspace/user-files/ at sandbox creation time.
+	 */
+	private readonly onSandboxReady?: (ctx: {
+		sandboxName: string
+		userId: string
+		openshell: OpenShellClient
+	}) => Promise<void>
 
-	constructor(pool: Pool, opts?: { config?: Partial<OrchestratorConfig>; openshell?: OpenShellClient }) {
+	constructor(
+		pool: Pool,
+		opts?: {
+			config?: Partial<OrchestratorConfig>
+			openshell?: OpenShellClient
+			onSandboxReady?: (ctx: { sandboxName: string; userId: string; openshell: OpenShellClient }) => Promise<void>
+		},
+	) {
 		this.pool = pool
 		this.openshell = opts?.openshell ?? new OpenShellClient()
 		this.config = { ...DEFAULT_CONFIG, ...opts?.config }
+		this.onSandboxReady = opts?.onSandboxReady
 	}
 
 	// -----------------------------------------------------------------------
@@ -116,6 +137,57 @@ export class SandboxManager {
 		if (state) {
 			state.lastActivityAt = Date.now()
 			await userSandboxQueries.touch(this.pool, state.recordId)
+		}
+	}
+
+	/**
+	 * Re-establish port forwarding for a user's sandbox.
+	 *
+	 * Called when a fetch to the sandbox fails, indicating the port forward
+	 * may have died (e.g. SSH tunnel timeout, OpenShell gateway restart).
+	 * Checks whether the sandbox pod is still alive and restarts the forward.
+	 *
+	 * Returns true if the forward was successfully re-established.
+	 */
+	async refreshPortForward(userId: string): Promise<boolean> {
+		const state = this.sandboxes.get(userId)
+		if (!state || state.phase !== "ready" || !state.forwardedPort) {
+			return false
+		}
+
+		// Verify the sandbox pod is still alive
+		const info = await this.openshell.get(state.sandboxName)
+		if (!info || info.phase !== "ready") {
+			log.warn("Sandbox pod is no longer ready, cannot refresh forward", {
+				sandbox: state.sandboxName,
+				phase: info?.phase,
+			})
+			return false
+		}
+
+		// Stop the old forward (may already be dead, ignore errors)
+		try {
+			await this.openshell.forwardStop(state.forwardedPort, state.sandboxName)
+		} catch {
+			// Forward already gone
+		}
+
+		// Re-establish the forward on the same port
+		try {
+			await this.openshell.forwardStart(state.sandboxName, state.forwardedPort)
+			log.info("Port forward re-established", {
+				sandbox: state.sandboxName,
+				port: state.forwardedPort,
+			})
+			return true
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			log.error("Failed to re-establish port forward", {
+				sandbox: state.sandboxName,
+				port: state.forwardedPort,
+				error: message,
+			})
+			return false
 		}
 	}
 
@@ -439,6 +511,21 @@ export class SandboxManager {
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : String(err)
 					log.warn("Failed to upload knowledge base (non-fatal)", { error: msg })
+				}
+			}
+
+			// Run the onSandboxReady hook to upload user files into the sandbox.
+			// This is best-effort -- the sandbox still functions without user files.
+			if (this.onSandboxReady) {
+				try {
+					await this.onSandboxReady({
+						sandboxName: record.sandboxName,
+						userId,
+						openshell: this.openshell,
+					})
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err)
+					log.warn("onSandboxReady hook failed (non-fatal)", { error: msg })
 				}
 			}
 

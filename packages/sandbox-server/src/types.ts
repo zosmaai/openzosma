@@ -49,3 +49,25 @@ export interface KBFileEntry {
 export interface KBListResponse {
 	files: KBFileEntry[]
 }
+
+// ---------------------------------------------------------------------------
+// User files types
+// ---------------------------------------------------------------------------
+
+/** A single entry (file or folder) in the user files area. */
+export interface UserFileEntry {
+	/** File or folder name. */
+	name: string
+	/** Relative path from the user-files root. */
+	path: string
+	/** True if this entry is a directory. */
+	isFolder: boolean
+	/** MIME type (null for folders). */
+	mimeType: string | null
+	/** Size in bytes (0 for folders). */
+	sizeBytes: number
+	/** ISO 8601 last modified timestamp. */
+	modifiedAt: string
+	/** Child entries (only present for folders in tree responses). */
+	children?: UserFileEntry[]
+}

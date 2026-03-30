@@ -1,6 +1,6 @@
 import type { WebSocket } from "ws"
 import type { SessionManager } from "./session-manager.js"
-import type { WsClientMessage, WsServerMessage } from "./types.js"
+import type { WsAttachment, WsClientMessage, WsServerMessage } from "./types.js"
 
 /** Active turn abort controllers, keyed by sessionId. */
 const activeTurns = new Map<string, AbortController>()
@@ -45,7 +45,7 @@ export function handleWebSocket(ws: WebSocket, sessionManager: SessionManager): 
 			const controller = new AbortController()
 			activeTurns.set(msg.sessionId, controller)
 
-			void streamResponse(ws, sessionManager, msg.sessionId, msg.content, controller, msg.userId)
+			void streamResponse(ws, sessionManager, msg.sessionId, msg.content, controller, msg.userId, msg.attachments)
 			return
 		}
 
@@ -69,9 +69,10 @@ async function streamResponse(
 	content: string,
 	controller: AbortController,
 	userId?: string,
+	attachments?: WsAttachment[],
 ): Promise<void> {
 	try {
-		for await (const event of sessionManager.sendMessage(sessionId, content, controller.signal, userId)) {
+		for await (const event of sessionManager.sendMessage(sessionId, content, controller.signal, userId, attachments)) {
 			send(ws, event)
 		}
 	} catch (err) {

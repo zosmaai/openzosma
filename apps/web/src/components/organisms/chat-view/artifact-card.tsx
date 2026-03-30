@@ -2,23 +2,11 @@
 
 import { Button } from "@/src/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip"
-import { DownloadIcon, EyeIcon, FileIcon, FileJsonIcon, FileTextIcon, ImageIcon } from "lucide-react"
+import { formatSizeBytes, getFileIcon, isPreviewable } from "@/src/utils/file-utils"
+import { DownloadIcon, ExternalLinkIcon, EyeIcon } from "lucide-react"
+import Link from "next/link"
 import { useParams } from "next/navigation"
 import type { FileArtifact } from "./types"
-
-function formatSizeBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function getFileIcon(mediatype: string) {
-	if (mediatype.startsWith("image/")) return <ImageIcon className="size-4 text-blue-500" />
-	if (mediatype === "application/json") return <FileJsonIcon className="size-4 text-yellow-500" />
-	if (mediatype === "text/html") return <FileTextIcon className="size-4 text-orange-500" />
-	if (mediatype.startsWith("text/")) return <FileTextIcon className="size-4 text-muted-foreground" />
-	return <FileIcon className="size-4 text-muted-foreground" />
-}
 
 type ArtifactCardProps = {
 	artifact: FileArtifact
@@ -30,13 +18,7 @@ const ArtifactCard = ({ artifact, onPreview }: ArtifactCardProps) => {
 	const downloadUrl = `/api/conversations/${conversationid}/artifacts/${encodeURIComponent(artifact.filename)}?download=true`
 	const previewUrl = `/api/conversations/${conversationid}/artifacts/${encodeURIComponent(artifact.filename)}`
 
-	const isPreviewable =
-		artifact.mediatype.startsWith("image/") ||
-		artifact.mediatype === "text/html" ||
-		artifact.mediatype === "text/plain" ||
-		artifact.mediatype === "text/markdown" ||
-		artifact.mediatype === "text/csv" ||
-		artifact.mediatype === "application/json"
+	const canPreview = isPreviewable(artifact.mediatype)
 
 	return (
 		<div className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-accent/50 w-fit max-w-sm">
@@ -46,7 +28,7 @@ const ArtifactCard = ({ artifact, onPreview }: ArtifactCardProps) => {
 				<p className="text-[10px] text-muted-foreground">{formatSizeBytes(artifact.sizebytes)}</p>
 			</div>
 			<div className="flex items-center gap-1 shrink-0">
-				{isPreviewable && (
+				{canPreview && (
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -80,6 +62,19 @@ const ArtifactCard = ({ artifact, onPreview }: ArtifactCardProps) => {
 							</Button>
 						</TooltipTrigger>
 						<TooltipContent>Download</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button variant="ghost" size="icon-sm" asChild>
+								<Link href="/files">
+									<ExternalLinkIcon className="size-3.5" />
+									<span className="sr-only">View in Files</span>
+								</Link>
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>View in Files</TooltipContent>
 					</Tooltip>
 				</TooltipProvider>
 			</div>

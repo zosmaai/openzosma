@@ -31,5 +31,8 @@ pgdata/
 # Agent session workspaces
 workspace/
 
+# Local file storage (deprecated)
+data/
+
 # Knowledge base
 .knowledge-base

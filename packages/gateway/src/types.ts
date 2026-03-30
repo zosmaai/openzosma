@@ -53,9 +53,26 @@ export interface GatewayEvent {
 
 /** Inbound WebSocket message from client. */
 export type WsClientMessage =
-	| { type: "message"; sessionId: string; content: string; userId?: string }
+	| {
+			type: "message"
+			sessionId: string
+			content: string
+			userId?: string
+			/** File attachments as data URLs with metadata. */
+			attachments?: WsAttachment[]
+	  }
 	| { type: "cancel"; sessionId: string }
 	| { type: "ping" }
+
+/** A file attachment included in a WebSocket message. */
+export interface WsAttachment {
+	/** Original filename. */
+	filename: string
+	/** MIME type (e.g. "image/png", "text/csv"). */
+	mediaType: string
+	/** File content as a data URL (data:mimetype;base64,...). */
+	dataUrl: string
+}
 
 /** Outbound WebSocket message to client. */
 export type WsServerMessage = GatewayEvent | { type: "pong" }

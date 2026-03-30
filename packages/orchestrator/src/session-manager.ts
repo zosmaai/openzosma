@@ -6,7 +6,7 @@ import type { UserSandbox } from "@openzosma/db"
 import { createLogger } from "@openzosma/logger"
 import type { SandboxHttpClient } from "./sandbox-http-client.js"
 import type { SandboxManager } from "./sandbox-manager.js"
-import type { KBFileEntry, OrchestratorSession } from "./types.js"
+import type { KBFileEntry, OrchestratorSession, UserFileEntry } from "./types.js"
 
 const log = createLogger({ component: "orchestrator" })
 
@@ -178,6 +178,9 @@ export class OrchestratorSessionManager {
 	 *
 	 * Routes the message to the sandbox-server running inside the user's
 	 * sandbox and proxies the SSE event stream back.
+	 *
+	 * If the initial fetch fails (e.g. port forward died), attempts to
+	 * re-establish the port forward and retries once before giving up.
 	 */
 	async *sendMessage(
 		sessionId: string,
@@ -216,7 +219,9 @@ export class OrchestratorSessionManager {
 			return
 		}
 
-		// Proxy the SSE stream from the sandbox-server
+		// Proxy the SSE stream from the sandbox-server.
+		// If the fetch fails (connection refused / port forward dead),
+		// try to re-establish the forward and retry once.
 		let eventCount = 0
 		try {
 			for await (const event of client.sendMessage(sessionId, content, signal)) {
@@ -224,8 +229,48 @@ export class OrchestratorSessionManager {
 				yield event
 			}
 		} catch (err) {
-			if (!signal?.aborted) {
-				const message = err instanceof Error ? err.message : "Unknown sandbox error"
+			if (signal?.aborted) return
+
+			const message = err instanceof Error ? err.message : "Unknown sandbox error"
+			const isFetchFailure = message === "fetch failed" || message.includes("ECONNREFUSED")
+
+			if (isFetchFailure && eventCount === 0) {
+				// No events were received yet, so we can safely retry.
+				// The port forward likely died; attempt to re-establish it.
+				log.warn("Fetch failed before any events, attempting port forward recovery", {
+					sessionId,
+					sandbox: session.sandboxName,
+				})
+
+				const recovered = await this.sandboxManager.refreshPortForward(session.userId)
+				if (recovered) {
+					// Get a fresh client with the (potentially same) port
+					try {
+						client = this.sandboxManager.getHttpClient(session.userId)
+					} catch {
+						log.error("Failed to get HTTP client after recovery")
+						yield { type: "error", error: message }
+						return
+					}
+
+					// Retry once
+					try {
+						for await (const event of client.sendMessage(sessionId, content, signal)) {
+							eventCount++
+							yield event
+						}
+					} catch (retryErr) {
+						if (!signal?.aborted) {
+							const retryMessage = retryErr instanceof Error ? retryErr.message : "Unknown sandbox error"
+							log.error("sendMessage failed after port forward recovery", { error: retryMessage })
+							yield { type: "error", error: retryMessage }
+						}
+					}
+				} else {
+					log.error("Port forward recovery failed", { error: message })
+					yield { type: "error", error: message }
+				}
+			} else {
 				log.error("sendMessage error", { error: message })
 				yield { type: "error", error: message }
 			}
@@ -316,5 +361,98 @@ export class OrchestratorSessionManager {
 		if (!state) return []
 		const client = this.sandboxManager.getHttpClient(userId)
 		return client.listKBFiles()
+	}
+
+	// -----------------------------------------------------------------------
+	// File upload
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Upload files into a user's sandbox workspace.
+	 *
+	 * Ensures the sandbox is running, then uploads the files via the
+	 * sandbox-server HTTP API. Each file is base64-encoded.
+	 *
+	 * @returns Array of successfully uploaded file paths within the sandbox workspace.
+	 */
+	async uploadFiles(
+		userId: string,
+		files: Array<{ filename: string; content: string; dir?: string }>,
+	): Promise<Array<{ filename: string; path: string }>> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.uploadFiles(files)
+	}
+
+	// -----------------------------------------------------------------------
+	// User files (sandbox filesystem passthrough)
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Get the recursive directory tree of all user files in the sandbox.
+	 * Creates the sandbox eagerly if it doesn't exist yet.
+	 */
+	async getUserFilesTree(userId: string): Promise<UserFileEntry[]> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.getUserFilesTree()
+	}
+
+	/**
+	 * List contents of a single directory within user-files.
+	 */
+	async listUserFiles(userId: string, path = "/"): Promise<UserFileEntry[]> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.listUserFiles(path)
+	}
+
+	/**
+	 * Download a file from user-files. Returns the raw Response.
+	 */
+	async downloadUserFile(userId: string, path: string): Promise<Response> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.downloadUserFile(path)
+	}
+
+	/**
+	 * Upload files to a directory within user-files.
+	 */
+	async uploadUserFiles(
+		userId: string,
+		dirPath: string,
+		files: Array<{ filename: string; content: string }>,
+	): Promise<UserFileEntry[]> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.uploadUserFiles(dirPath, files)
+	}
+
+	/**
+	 * Create a folder within user-files.
+	 */
+	async createUserFolder(userId: string, path: string): Promise<UserFileEntry> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.createUserFolder(path)
+	}
+
+	/**
+	 * Rename or move a file/folder within user-files.
+	 */
+	async renameUserFile(userId: string, from: string, to: string): Promise<UserFileEntry> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.renameUserFile(from, to)
+	}
+
+	/**
+	 * Delete a file or folder within user-files.
+	 */
+	async deleteUserFile(userId: string, path: string): Promise<void> {
+		await this.sandboxManager.ensureSandbox(userId)
+		const client = this.sandboxManager.getHttpClient(userId)
+		return client.deleteUserFile(path)
 	}
 }

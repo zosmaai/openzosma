@@ -8,6 +8,8 @@ import type {
 	SandboxHealthResponse,
 	SandboxSessionInfo,
 	SandboxSessionListResponse,
+	UserFileEntry,
+	UserFilesListResponse,
 } from "./types.js"
 
 const log = createLogger({ component: "orchestrator" })
@@ -139,6 +141,35 @@ export class SandboxHttpClient {
 	}
 
 	// -----------------------------------------------------------------------
+	// File upload
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Upload files into the sandbox workspace.
+	 *
+	 * Each file is base64-encoded and written to the specified subdirectory
+	 * within /workspace/ inside the sandbox.
+	 *
+	 * @returns Array of successfully uploaded file paths.
+	 */
+	async uploadFiles(
+		files: Array<{ filename: string; content: string; dir?: string }>,
+	): Promise<Array<{ filename: string; path: string }>> {
+		const res = await this.fetch("/upload", {
+			method: "POST",
+			body: JSON.stringify({ files }),
+		})
+
+		if (!res.ok) {
+			const text = await res.text().catch(() => `HTTP ${res.status}`)
+			throw new Error(`Sandbox file upload failed (${res.status}): ${text}`)
+		}
+
+		const body = (await res.json()) as { ok: boolean; uploaded: Array<{ filename: string; path: string }> }
+		return body.uploaded
+	}
+
+	// -----------------------------------------------------------------------
 	// Knowledge base
 	// -----------------------------------------------------------------------
 
@@ -181,6 +212,111 @@ export class SandboxHttpClient {
 		const res = await this.fetch(`/kb/${path}`, { method: "DELETE" })
 		if (!res.ok && res.status !== 404) {
 			throw new Error(`Sandbox deleteKBFile failed (${res.status})`)
+		}
+	}
+
+	// -----------------------------------------------------------------------
+	// User files
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Get the recursive directory tree of all user files.
+	 */
+	async getUserFilesTree(): Promise<UserFileEntry[]> {
+		const res = await this.fetch("/user-files/tree")
+		if (!res.ok) {
+			throw new Error(`Sandbox getUserFilesTree failed (${res.status})`)
+		}
+		const body = (await res.json()) as UserFilesListResponse
+		return body.entries
+	}
+
+	/**
+	 * List contents of a single directory within user-files.
+	 */
+	async listUserFiles(path = "/"): Promise<UserFileEntry[]> {
+		const res = await this.fetch(`/user-files/list?path=${encodeURIComponent(path)}`)
+		if (!res.ok) {
+			throw new Error(`Sandbox listUserFiles failed (${res.status})`)
+		}
+		const body = (await res.json()) as UserFilesListResponse
+		return body.entries
+	}
+
+	/**
+	 * Download a file from user-files. Returns the raw Response
+	 * so the caller can stream the body.
+	 */
+	async downloadUserFile(path: string): Promise<Response> {
+		const res = await this.fetch(`/user-files/download?path=${encodeURIComponent(path)}`)
+		if (!res.ok) {
+			const text = await res.text().catch(() => `HTTP ${res.status}`)
+			throw new Error(`Sandbox downloadUserFile failed (${res.status}): ${text}`)
+		}
+		return res
+	}
+
+	/**
+	 * Upload files to a directory within user-files.
+	 */
+	async uploadUserFiles(
+		dirPath: string,
+		files: Array<{ filename: string; content: string }>,
+	): Promise<UserFileEntry[]> {
+		const res = await this.fetch(`/user-files/upload?path=${encodeURIComponent(dirPath)}`, {
+			method: "POST",
+			body: JSON.stringify({ files }),
+		})
+		if (!res.ok) {
+			const text = await res.text().catch(() => `HTTP ${res.status}`)
+			throw new Error(`Sandbox uploadUserFiles failed (${res.status}): ${text}`)
+		}
+		const body = (await res.json()) as { ok: boolean; uploaded: UserFileEntry[] }
+		return body.uploaded
+	}
+
+	/**
+	 * Create a folder within user-files.
+	 */
+	async createUserFolder(path: string): Promise<UserFileEntry> {
+		const res = await this.fetch("/user-files/folder", {
+			method: "POST",
+			body: JSON.stringify({ path }),
+		})
+		if (!res.ok) {
+			const text = await res.text().catch(() => `HTTP ${res.status}`)
+			throw new Error(`Sandbox createUserFolder failed (${res.status}): ${text}`)
+		}
+		const body = (await res.json()) as { ok: boolean; entry: UserFileEntry }
+		return body.entry
+	}
+
+	/**
+	 * Rename or move a file/folder within user-files.
+	 */
+	async renameUserFile(from: string, to: string): Promise<UserFileEntry> {
+		const res = await this.fetch("/user-files/rename", {
+			method: "POST",
+			body: JSON.stringify({ from, to }),
+		})
+		if (!res.ok) {
+			const text = await res.text().catch(() => `HTTP ${res.status}`)
+			throw new Error(`Sandbox renameUserFile failed (${res.status}): ${text}`)
+		}
+		const body = (await res.json()) as { ok: boolean; entry: UserFileEntry }
+		return body.entry
+	}
+
+	/**
+	 * Delete a file or folder within user-files.
+	 */
+	async deleteUserFile(path: string): Promise<void> {
+		const res = await this.fetch(`/user-files?path=${encodeURIComponent(path)}`, {
+			method: "DELETE",
+		})
+		if (!res.ok && res.status !== 404) {
+			const text = await res.text().catch(() => `HTTP ${res.status}`)
+			throw new Error(`Sandbox deleteUserFile failed (${res.status}): ${text}`)
 		}
 	}
 

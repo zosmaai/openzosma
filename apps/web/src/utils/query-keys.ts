@@ -5,4 +5,6 @@ export const QUERY_KEYS = {
 	KB_TREE: "kb-tree",
 	KB_FILE: "kb-file",
 	ARTIFACT_CONTENT: "artifact-content",
+	FILES_TREE: "files-tree",
+	FILES_LIST: "files-list",
 }

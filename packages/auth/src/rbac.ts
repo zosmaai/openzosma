@@ -15,12 +15,14 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 		{ resource: "api_keys", actions: ["read", "write", "delete"] },
 		{ resource: "sandboxes", actions: ["read", "delete"] },
 		{ resource: "usage", actions: ["read"] },
+		{ resource: "files", actions: ["read", "write", "delete"] },
 	],
 	member: [
 		{ resource: "sessions", actions: ["read", "write"] },
 		{ resource: "agent_configs", actions: ["read"] },
 		{ resource: "sandboxes", actions: ["read", "delete"] },
 		{ resource: "usage", actions: ["read"] },
+		{ resource: "files", actions: ["read", "write", "delete"] },
 	],
 }
 

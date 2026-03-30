@@ -5,10 +5,12 @@ import type { Role } from "@openzosma/auth"
 import type { Pool } from "@openzosma/db"
 import { agentConfigQueries, apiKeyQueries } from "@openzosma/db"
 import { createLogger } from "@openzosma/logger"
+import type { OrchestratorSessionManager } from "@openzosma/orchestrator"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
 import { createPerAgentRouter } from "./a2a.js"
+import { createFileRoutes } from "./file-routes.js"
 import { createAuthMiddleware, requirePermission } from "./middleware/auth.js"
 import type { SessionManager } from "./session-manager.js"
 
@@ -21,14 +23,19 @@ interface AppVariables {
 	apiKeyScopes: string[]
 }
 
-export const createApp = (sessionManager: SessionManager, pool?: Pool, auth?: Auth) => {
+export const createApp = (
+	sessionManager: SessionManager,
+	pool?: Pool,
+	auth?: Auth,
+	orchestrator?: OrchestratorSessionManager,
+) => {
 	const app = new Hono<{ Variables: AppVariables }>()
 
 	app.use(
 		"*",
 		cors({
 			origin: ["http://localhost:3000"],
-			allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+			allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
 			allowHeaders: ["Content-Type", "Authorization"],
 		}),
 	)
@@ -66,6 +73,14 @@ export const createApp = (sessionManager: SessionManager, pool?: Pool, auth?: Au
 	// Auth middleware — protects all /api/v1/* routes
 	if (auth && pool) {
 		app.use("/api/v1/*", createAuthMiddleware(auth, pool))
+	}
+
+	// -----------------------------------------------------------------------
+	// File management routes (require orchestrator for sandbox filesystem access)
+	// -----------------------------------------------------------------------
+
+	if (orchestrator) {
+		app.route("/api/v1/files", createFileRoutes({ orchestrator }))
 	}
 
 	// -----------------------------------------------------------------------
@@ -129,35 +144,6 @@ export const createApp = (sessionManager: SessionManager, pool?: Pool, auth?: Au
 			return c.json({ error: "Session not found" }, 404)
 		}
 		return c.json(session.messages)
-	})
-
-	// -----------------------------------------------------------------------
-	// Artifact routes
-	// -----------------------------------------------------------------------
-
-	app.get("/api/v1/sessions/:id/artifacts", requirePermission("sessions", "read"), (c) => {
-		const artifacts = sessionManager.artifactManager.listArtifacts(c.req.param("id"))
-		return c.json({ artifacts })
-	})
-
-	app.get("/api/v1/sessions/:id/artifacts/:filename", requirePermission("sessions", "read"), (c) => {
-		const sessionId = c.req.param("id")
-		const filename = c.req.param("filename")
-		const result = sessionManager.artifactManager.getArtifactStream(sessionId, filename)
-
-		if (!result) {
-			return c.json({ error: "Artifact not found" }, 404)
-		}
-
-		const download = c.req.query("download") === "true"
-		const disposition = download ? `attachment; filename="${filename}"` : "inline"
-
-		c.header("Content-Type", result.mediatype)
-		c.header("Content-Length", String(result.sizebytes))
-		c.header("Content-Disposition", disposition)
-		c.header("Cache-Control", "private, max-age=3600")
-
-		return c.body(result.stream as unknown as ReadableStream)
 	})
 
 	// SSE stream — subscribe to real-time events for a session.
