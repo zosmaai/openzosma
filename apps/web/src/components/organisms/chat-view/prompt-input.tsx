@@ -14,8 +14,8 @@ import {
 } from "@/src/components/ai-elements/prompt-input"
 import MyFilesPicker from "@/src/components/organisms/chat-view/my-files-picker"
 import {
-	SlashCommandPicker,
 	SLASH_COMMANDS,
+	SlashCommandPicker,
 	type SlashCommandPickerRef,
 } from "@/src/components/organisms/chat-view/slash-command-picker"
 import { Button } from "@/src/components/ui/button"
@@ -115,15 +115,11 @@ const PromptInput = ({
 								onKeyDown={(e) => {
 									if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return
 									e.preventDefault()
-									const buttons = Array.from(
-										e.currentTarget.querySelectorAll<HTMLButtonElement>("button"),
-									)
+									const buttons = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button"))
 									if (buttons.length === 0) return
 									const idx = buttons.indexOf(document.activeElement as HTMLButtonElement)
 									const next =
-										e.key === "ArrowDown"
-											? (idx + 1) % buttons.length
-											: (idx - 1 + buttons.length) % buttons.length
+										e.key === "ArrowDown" ? (idx + 1) % buttons.length : (idx - 1 + buttons.length) % buttons.length
 									buttons[next].focus()
 								}}
 							>
