@@ -1,19 +1,7 @@
 "use client"
 
-import {
-	PromptInput,
-	PromptInputActionAddAttachments,
-	PromptInputActionMenu,
-	PromptInputActionMenuContent,
-	PromptInputActionMenuTrigger,
-	PromptInputAttachment,
-	PromptInputAttachments,
-	PromptInputFooter,
-	type PromptInputMessage,
-	PromptInputSubmit,
-	PromptInputTextarea,
-	PromptInputTools,
-} from "@/src/components/ai-elements/prompt-input"
+import type { PromptInputMessage } from "@/src/components/ai-elements/prompt-input"
+import PromptInput from "@/src/components/organisms/chat-view/prompt-input"
 import useCreateConversation from "@/src/hooks/chat/use-create-conversation"
 import { setPendingMessage } from "@/src/lib/pending-message"
 import { motion } from "framer-motion"
@@ -82,21 +70,12 @@ const ChatPage = () => {
 
 				{/* Prompt input */}
 				<div className="w-full">
-					<PromptInput onSubmit={handlesubmit} className="rounded-lg border border-border bg-background">
-						<PromptInputAttachments>{(file) => <PromptInputAttachment data={file} />}</PromptInputAttachments>
-						<PromptInputTextarea placeholder="Ask anything about your data..." ref={textarearef} />
-						<PromptInputFooter>
-							<PromptInputTools>
-								<PromptInputActionMenu>
-									<PromptInputActionMenuTrigger />
-									<PromptInputActionMenuContent>
-										<PromptInputActionAddAttachments />
-									</PromptInputActionMenuContent>
-								</PromptInputActionMenu>
-							</PromptInputTools>
-							<PromptInputSubmit />
-						</PromptInputFooter>
-					</PromptInput>
+					<PromptInput
+						handlesubmit={handlesubmit}
+						hasmessages={false}
+						textarearef={textarearef as React.RefObject<HTMLTextAreaElement>}
+						streaming={false}
+					/>
 				</div>
 
 				{/* Suggestions */}

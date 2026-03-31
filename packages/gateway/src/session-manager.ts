@@ -8,6 +8,7 @@ import type { Pool } from "@openzosma/db"
 import { agentConfigQueries } from "@openzosma/db"
 import { createLogger } from "@openzosma/logger"
 import type { KBFileEntry, OrchestratorSessionManager } from "@openzosma/orchestrator"
+import { applySlashCommand } from "./command-parser.js"
 import type { FileArtifact, GatewayEvent, Session, SessionMessage, WsAttachment } from "./types.js"
 
 const log = createLogger({ component: "gateway" })
@@ -403,8 +404,8 @@ export class SessionManager {
 			}
 			state.session.messages.push(userMsg)
 
-			// Upload attachments to the sandbox and prepend file references
-			let augmentedContent = content
+			// Apply slash command mode instructions, then prepend file references
+			let augmentedContent = applySlashCommand(content)
 			if (attachments && attachments.length > 0) {
 				try {
 					const filesToUpload = attachments.map((att) => {
@@ -503,9 +504,12 @@ export class SessionManager {
 		}
 		session.messages.push(userMsg)
 
-		// Write attachments to workspace and prepend file references (local mode)
+		// Apply slash command mode instructions, then prepend file references (local mode)
+		const slashContent = applySlashCommand(content)
 		const augmentedContent =
-			attachments && attachments.length > 0 ? this.writeAttachmentsToDir(attachments, workspaceDir, content) : content
+			attachments && attachments.length > 0
+				? this.writeAttachmentsToDir(attachments, workspaceDir, slashContent)
+				: slashContent
 
 		let lastAssistantText = ""
 		let lastMessageId: string | undefined
