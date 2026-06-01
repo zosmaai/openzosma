@@ -30,6 +30,6 @@
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
 		"tsx": "^4.21.0",
-		"turbo": "^2.8.19"
+		"turbo": "^2.9.14"
 	}
 }
