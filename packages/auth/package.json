@@ -16,9 +16,9 @@
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"better-auth": "^1.2.7",
+		"better-auth": "^1.6.11",
 		"@better-auth/kysely-adapter": "^1.5.5",
-		"kysely": "^0.28.16",
+		"kysely": "^0.28.17",
 		"@openzosma/db": "workspace:*",
 		"pg": "^8.13.3"
 	},
