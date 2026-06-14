@@ -17,7 +17,7 @@
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@grpc/grpc-js": "^1.12.6",
+		"@grpc/grpc-js": "^1.14.4",
 		"@openzosma/logger": "workspace:*",
 		"@protobuf-ts/runtime": "^2.9.6",
 		"@protobuf-ts/runtime-rpc": "^2.9.6",
