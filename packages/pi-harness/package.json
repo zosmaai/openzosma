@@ -43,12 +43,12 @@
 	"dependencies": {
 		"@hono/node-server": "^1.19.13",
 		"chalk": "^5.5.0",
-		"hono": "^4.12.14"
+		"hono": "^4.12.25"
 	},
 	"devDependencies": {
 		"@openzosma/agents": "workspace:*",
 		"@types/node": "^22.15.2",
-		"esbuild": "^0.25.0",
+		"esbuild": "^0.28.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.7.3"
 	},

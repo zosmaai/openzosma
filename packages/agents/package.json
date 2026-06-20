@@ -22,7 +22,7 @@
 	"dependencies": {
 		"@mariozechner/pi-agent-core": "^0.61.0",
 		"@mariozechner/pi-ai": "^0.61.0",
-		"@mariozechner/pi-coding-agent": "^0.61.0",
+		"@mariozechner/pi-coding-agent": "^0.73.1",
 		"@openzosma/db": "workspace:*",
 		"@openzosma/integrations": "workspace:*",
 		"@openzosma/logger": "workspace:*",
