@@ -67,7 +67,10 @@ const createSessionManager = async (): Promise<SessionManager> => {
 
 const sessionManager = await createSessionManager()
 const auth = pool ? createAuthFromEnv() : undefined
-const app = createApp(sessionManager, pool, auth, orchestrator)
+
+// Start channel adapters before createApp so HTTP webhooks can mount.
+const adapters = await initAdapters(sessionManager)
+const app = createApp(sessionManager, pool, auth, orchestrator, adapters)
 
 const server = serve({ fetch: app.fetch, port: PORT, hostname: HOST }, () => {
 	log.info(`Gateway listening on ${HOST}:${PORT}`)
@@ -89,9 +92,6 @@ server.on("upgrade", (request, socket, head) => {
 wss.on("connection", (ws) => {
 	handleWebSocket(ws, sessionManager)
 })
-
-// Start channel adapters (Slack, WhatsApp, etc.) when their env vars are set
-const adapters = await initAdapters(sessionManager)
 
 process.on("SIGTERM", async () => {
 	for (const adapter of adapters) {
