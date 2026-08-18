@@ -10,11 +10,9 @@ export const verifyWhatsAppSignature = (
 	appSecret: string,
 ): boolean => {
 	if (!signatureHeader || !appSecret) return false
-	const expected =
-		"sha256=" +
-		createHmac("sha256", appSecret)
-			.update(typeof rawBody === "string" ? rawBody : rawBody)
-			.digest("hex")
+	const expected = `sha256=${createHmac("sha256", appSecret)
+		.update(typeof rawBody === "string" ? rawBody : rawBody)
+		.digest("hex")}`
 
 	try {
 		const a = Buffer.from(expected)
