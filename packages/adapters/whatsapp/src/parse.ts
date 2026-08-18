@@ -50,9 +50,7 @@ export const parseInboundMessage = (raw: Record<string, unknown>): WhatsAppInbou
 	}
 
 	if (type === "image" || type === "document" || type === "audio") {
-		const media = raw[type] as
-			| { id?: string; caption?: string; mime_type?: string; filename?: string }
-			| undefined
+		const media = raw[type] as { id?: string; caption?: string; mime_type?: string; filename?: string } | undefined
 		return {
 			id,
 			from,

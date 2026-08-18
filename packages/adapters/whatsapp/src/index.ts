@@ -40,9 +40,7 @@ interface SessionEntry {
 export class WhatsAppAdapter implements ChannelAdapter {
 	readonly name = "whatsapp"
 
-	private readonly config: Required<
-		Pick<WhatsAppAdapterConfig, "accessToken" | "verifyToken" | "apiVersion">
-	> &
+	private readonly config: Required<Pick<WhatsAppAdapterConfig, "accessToken" | "verifyToken" | "apiVersion">> &
 		WhatsAppAdapterConfig
 	private sessionManager: AdapterSessionManager | undefined
 	private readonly client: WhatsAppGraphClient
@@ -118,8 +116,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
 		// Ack quickly; process messages without blocking Meta's retry window too long.
 		// We still await processing so errors are logged before the response returns.
 		for (const item of items) {
-			const phoneNumberId =
-				item.metadata.phoneNumberId || this.config.phoneNumberId || ""
+			const phoneNumberId = item.metadata.phoneNumberId || this.config.phoneNumberId || ""
 			if (!phoneNumberId) {
 				log.warn("WhatsApp message missing phone_number_id")
 				continue
@@ -134,10 +131,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
 		return `whatsapp:${phoneNumberId}:${userPhone}`
 	}
 
-	private async enqueueMessage(
-		metadata: WhatsAppWebhookMetadata,
-		message: WhatsAppInboundMessage,
-	): Promise<void> {
+	private async enqueueMessage(metadata: WhatsAppWebhookMetadata, message: WhatsAppInboundMessage): Promise<void> {
 		const key = this.conversationKey(metadata.phoneNumberId, message.from)
 		const job = async () => {
 			try {
@@ -195,10 +189,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
 		return session.id
 	}
 
-	private async processMessage(
-		metadata: WhatsAppWebhookMetadata,
-		message: WhatsAppInboundMessage,
-	): Promise<void> {
+	private async processMessage(metadata: WhatsAppWebhookMetadata, message: WhatsAppInboundMessage): Promise<void> {
 		const sessionId = await this.getOrCreateSession(metadata.phoneNumberId, message.from)
 		const content = await this.toUserContent(message)
 		if (!content.trim()) {
@@ -237,9 +228,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
 				try {
 					const media = await this.client.downloadMedia(message.mediaId)
 					const sizeKb = Math.round(media.buffer.length / 1024)
-					const parts = [
-						`[WhatsApp ${label}${name}, ${sizeKb} KB${media.mimeType ? `, ${media.mimeType}` : ""}]`,
-					]
+					const parts = [`[WhatsApp ${label}${name}, ${sizeKb} KB${media.mimeType ? `, ${media.mimeType}` : ""}]`]
 					if (caption) parts.push(caption)
 					return parts.join("\n")
 				} catch (err) {

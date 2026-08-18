@@ -69,9 +69,7 @@ export const initAdapters = async (sessionManager: SessionManager): Promise<Http
 	}
 
 	if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_VERIFY_TOKEN) {
-		const mod = (await import(
-			/* webpackIgnore: true */ "@openzosma/adapter-whatsapp" as string
-		)) as {
+		const mod = (await import(/* webpackIgnore: true */ "@openzosma/adapter-whatsapp" as string)) as {
 			WhatsAppAdapter: new (config: WhatsAppAdapterConfig) => HttpChannelAdapter
 		}
 		adapters.push(
