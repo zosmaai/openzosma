@@ -33,6 +33,7 @@
 		"@hono/node-server": "^1.19.13",
 		"@openzosma/a2a": "workspace:*",
 		"@openzosma/adapter-slack": "workspace:*",
+		"@openzosma/adapter-whatsapp": "workspace:*",
 		"@openzosma/agents": "workspace:*",
 		"@openzosma/auth": "workspace:*",
 		"@openzosma/db": "workspace:*",

@@ -29,12 +29,29 @@ interface SlackAdapterConfig {
 	appToken?: string
 }
 
+interface WhatsAppAdapterConfig {
+	accessToken: string
+	verifyToken: string
+	appSecret?: string
+	phoneNumberId?: string
+	apiVersion?: string
+}
+
+/** Optional webhook route registration used by HTTP-based adapters (WhatsApp). */
+export interface HttpChannelAdapter extends ChannelAdapter {
+	handleVerify?(query: Record<string, string | undefined>): { status: number; body: string }
+	handleWebhook?(
+		rawBody: string,
+		signatureHeader: string | undefined,
+	): Promise<{ status: number; body: { ok?: boolean; error?: string } }>
+}
+
 /**
  * Initialize all configured channel adapters at gateway startup.
  * Adapters are enabled by the presence of their required env vars.
  */
-export const initAdapters = async (sessionManager: SessionManager): Promise<ChannelAdapter[]> => {
-	const adapters: ChannelAdapter[] = []
+export const initAdapters = async (sessionManager: SessionManager): Promise<HttpChannelAdapter[]> => {
+	const adapters: HttpChannelAdapter[] = []
 
 	if (process.env.SLACK_BOT_TOKEN) {
 		// Dynamic import keeps adapter-slack out of the gateway's compiled output.
@@ -47,6 +64,23 @@ export const initAdapters = async (sessionManager: SessionManager): Promise<Chan
 			new mod.SlackAdapter({
 				botToken: process.env.SLACK_BOT_TOKEN,
 				appToken: process.env.SLACK_APP_TOKEN,
+			}),
+		)
+	}
+
+	if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_VERIFY_TOKEN) {
+		const mod = (await import(
+			/* webpackIgnore: true */ "@openzosma/adapter-whatsapp" as string
+		)) as {
+			WhatsAppAdapter: new (config: WhatsAppAdapterConfig) => HttpChannelAdapter
+		}
+		adapters.push(
+			new mod.WhatsAppAdapter({
+				accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+				verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
+				appSecret: process.env.WHATSAPP_APP_SECRET,
+				phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+				apiVersion: process.env.WHATSAPP_API_VERSION,
 			}),
 		)
 	}

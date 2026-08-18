@@ -11,6 +11,7 @@ import type { OrchestratorSessionManager } from "@openzosma/orchestrator"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
+import type { HttpChannelAdapter } from "./adapters.js"
 import { createPerAgentRouter } from "./a2a.js"
 import { createFileRoutes } from "./file-routes.js"
 import { createAuthMiddleware, requirePermission } from "./middleware/auth.js"
@@ -30,6 +31,7 @@ export const createApp = (
 	pool?: Pool,
 	auth?: Auth,
 	orchestrator?: OrchestratorSessionManager,
+	adapters: HttpChannelAdapter[] = [],
 ) => {
 	const app = new Hono<{ Variables: AppVariables }>()
 
@@ -38,11 +40,31 @@ export const createApp = (
 		cors({
 			origin: ["http://localhost:3000"],
 			allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-			allowHeaders: ["Content-Type", "Authorization"],
+			allowHeaders: ["Content-Type", "Authorization", "X-Hub-Signature-256"],
 		}),
 	)
 
 	app.get("/health", (c) => c.json({ status: "ok" }))
+
+	// Meta WhatsApp Cloud API webhooks (public; signature checked inside adapter)
+	const whatsapp = adapters.find((a) => a.name === "whatsapp")
+	if (whatsapp?.handleVerify && whatsapp.handleWebhook) {
+		app.get("/webhooks/whatsapp", (c) => {
+			const result = whatsapp.handleVerify!({
+				"hub.mode": c.req.query("hub.mode") ?? undefined,
+				"hub.verify_token": c.req.query("hub.verify_token") ?? undefined,
+				"hub.challenge": c.req.query("hub.challenge") ?? undefined,
+			})
+			return c.text(result.body, result.status as 200 | 403)
+		})
+
+		app.post("/webhooks/whatsapp", async (c) => {
+			const rawBody = await c.req.text()
+			const signature = c.req.header("x-hub-signature-256") ?? undefined
+			const result = await whatsapp.handleWebhook!(rawBody, signature)
+			return c.json(result.body, result.status as 200 | 400 | 401)
+		})
+	}
 
 	// A2A default Agent Card — returns the first agent config's card
 	app.get("/.well-known/agent.json", async (c) => {
